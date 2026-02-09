@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a472a">
+    <title>Golf Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>🏌️ Golf Tracker</h1>
+            <div class="date-nav">
+                <button id="prevDay" class="nav-btn">◀</button>
+                <span id="currentDate"></span>
+                <button id="nextDay" class="nav-btn">▶</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Session Type Toggle -->
+            <div class="session-type">
+                <button class="session-btn active" data-type="practice">Practice</button>
+                <button class="session-btn" data-type="round">Round</button>
+            </div>
+
+            <!-- Shot Counters -->
+            <section class="shot-counters">
+                <h2>Shots</h2>
+                <div id="shotGrid" class="shot-grid">
+                    <!-- Dynamically populated -->
+                </div>
+                <button id="addShotType" class="add-btn">+ Add Shot Type</button>
+            </section>
+
+            <!-- Holes Played -->
+            <section class="holes-section">
+                <h2>Holes Played</h2>
+                <div class="holes-counter">
+                    <button class="counter-btn minus" data-target="holes">−</button>
+                    <span id="holesCount" class="count">0</span>
+                    <button class="counter-btn plus" data-target="holes">+</button>
+                </div>
+                <div class="quick-holes">
+                    <button class="quick-btn" data-holes="9">9</button>
+                    <button class="quick-btn" data-holes="18">18</button>
+                </div>
+            </section>
+
+            <!-- Time Spent -->
+            <section class="time-section">
+                <h2>Time Spent</h2>
+                <div class="time-input">
+                    <input type="number" id="timeHours" min="0" max="12" placeholder="0"> h
+                    <input type="number" id="timeMinutes" min="0" max="59" placeholder="0"> m
+                </div>
+            </section>
+
+            <!-- Quality Rating -->
+            <section class="quality-section">
+                <h2>Session Quality</h2>
+                <div class="quality-rating" id="qualityRating">
+                    <button class="quality-btn" data-rating="1">1</button>
+                    <button class="quality-btn" data-rating="2">2</button>
+                    <button class="quality-btn" data-rating="3">3</button>
+                    <button class="quality-btn" data-rating="4">4</button>
+                    <button class="quality-btn" data-rating="5">5</button>
+                </div>
+                <p class="quality-label" id="qualityLabel">Tap to rate</p>
+            </section>
+
+            <!-- Notes -->
+            <section class="notes-section">
+                <h2>Session Notes</h2>
+                <textarea id="sessionNotes" placeholder="What were you working on? (tempo, grip, alignment, short game focus...)"></textarea>
+            </section>
+
+            <!-- Stats -->
+            <section class="stats-section">
+                <h2>This Week</h2>
+                <div class="stats-grid" id="weeklyStats">
+                    <!-- Dynamically populated -->
+                </div>
+                <div class="streak" id="streakDisplay">
+                    <!-- Streak info -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Add Shot Type Modal -->
+        <div id="addShotModal" class="modal">
+            <div class="modal-content">
+                <h3>Add Shot Type</h3>
+                <input type="text" id="newShotName" placeholder="Shot name (e.g., Bunker, Flop)">
+                <div class="modal-buttons">
+                    <button id="cancelAddShot" class="modal-btn cancel">Cancel</button>
+                    <button id="confirmAddShot" class="modal-btn confirm">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Shot Type Modal -->
+        <div id="deleteShotModal" class="modal">
+            <div class="modal-content">
+                <h3>Delete Shot Type?</h3>
+                <p id="deleteShotName"></p>
+                <div class="modal-buttons">
+                    <button id="cancelDeleteShot" class="modal-btn cancel">Cancel</button>
+                    <button id="confirmDeleteShot" class="modal-btn delete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
