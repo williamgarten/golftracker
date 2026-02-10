@@ -480,6 +480,7 @@ function setDirectShotCount(shotId, value) {
     }
     
     updateWeeklyStats();
+}
 
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
