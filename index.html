@@ -118,6 +118,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- Direct Input Modal -->
+        <div id="directInputModal" class="modal">
+            <div class="modal-content">
+                <h3 id="directInputTitle">Enter Count</h3>
+                <input type="number" id="directInputValue" min="0" max="9999" inputmode="numeric" pattern="[0-9]*">
+                <div class="modal-buttons">
+                    <button id="cancelDirectInput" class="modal-btn cancel">Cancel</button>
+                    <button id="confirmDirectInput" class="modal-btn confirm">Set</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

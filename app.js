@@ -18,6 +18,7 @@ const QUALITY_LABELS = {
 let currentDate = new Date();
 let shotTypes = [];
 let deleteTargetId = null;
+let directInputTarget = null; // { type: 'shot'|'holes', id: string|null }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -307,6 +308,11 @@ function setupEventListeners() {
             const delta = e.target.classList.contains('plus') ? 1 : -1;
             updateShotCount(shotId, delta);
         }
+        if (e.target.classList.contains('shot-count')) {
+            const shotId = e.target.id.replace('count-', '');
+            const shot = shotTypes.find(s => s.id === shotId);
+            openDirectInput('shot', shotId, shot?.name || 'Shots', parseInt(e.target.textContent) || 0);
+        }
         if (e.target.classList.contains('delete-btn')) {
             deleteTargetId = e.target.dataset.deleteId;
             const shot = shotTypes.find(s => s.id === deleteTargetId);
@@ -320,6 +326,9 @@ function setupEventListeners() {
         if (e.target.classList.contains('counter-btn')) {
             const delta = e.target.classList.contains('plus') ? 1 : -1;
             updateHoles(delta);
+        }
+        if (e.target.id === 'holesCount') {
+            openDirectInput('holes', null, 'Holes Played', parseInt(e.target.textContent) || 0);
         }
     });
     
@@ -421,7 +430,56 @@ function setupEventListeners() {
             document.getElementById('confirmAddShot').click();
         }
     });
+    
+    // Direct input modal
+    document.getElementById('cancelDirectInput').addEventListener('click', () => {
+        document.getElementById('directInputModal').classList.remove('active');
+        directInputTarget = null;
+    });
+    
+    document.getElementById('confirmDirectInput').addEventListener('click', () => {
+        const value = parseInt(document.getElementById('directInputValue').value) || 0;
+        if (directInputTarget) {
+            if (directInputTarget.type === 'shot') {
+                setDirectShotCount(directInputTarget.id, value);
+            } else if (directInputTarget.type === 'holes') {
+                setHoles(value);
+            }
+        }
+        document.getElementById('directInputModal').classList.remove('active');
+        directInputTarget = null;
+    });
+    
+    document.getElementById('directInputValue').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('confirmDirectInput').click();
+        }
+    });
 }
+
+function openDirectInput(type, id, label, currentValue) {
+    directInputTarget = { type, id };
+    document.getElementById('directInputTitle').textContent = label;
+    document.getElementById('directInputValue').value = currentValue;
+    document.getElementById('directInputModal').classList.add('active');
+    setTimeout(() => {
+        document.getElementById('directInputValue').select();
+    }, 100);
+}
+
+function setDirectShotCount(shotId, value) {
+    const dateKey = getDateKey(currentDate);
+    const data = getDayData(dateKey);
+    
+    data.shots[shotId] = Math.max(0, value);
+    saveDayData(dateKey, data);
+    
+    const countEl = document.getElementById(`count-${shotId}`);
+    if (countEl) {
+        countEl.textContent = data.shots[shotId];
+    }
+    
+    updateWeeklyStats();
 
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {

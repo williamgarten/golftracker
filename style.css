@@ -172,14 +172,15 @@ section h2 {
 }
 
 .counter-btn {
-    width: 36px;
-    height: 36px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .counter-btn:active {
@@ -189,6 +190,7 @@ section h2 {
 .counter-btn.minus {
     background: var(--white);
     color: var(--green-dark);
+    border: 2px solid var(--green-light);
 }
 
 .counter-btn.plus {
@@ -197,10 +199,18 @@ section h2 {
 }
 
 .shot-count {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: var(--green-dark);
-    min-width: 40px;
+    min-width: 50px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.shot-count:active {
+    background: var(--green-pale);
 }
 
 .add-btn {
@@ -237,6 +247,20 @@ section h2 {
     color: var(--green-dark);
     min-width: 60px;
     text-align: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.holes-counter .count:active {
+    background: var(--green-pale);
+}
+
+.holes-counter .counter-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 1.6rem;
 }
 
 .quick-holes {
@@ -272,11 +296,11 @@ section h2 {
 }
 
 .time-input input {
-    width: 60px;
-    padding: 10px;
+    width: 70px;
+    padding: 12px;
     border: 2px solid var(--green-pale);
     border-radius: 8px;
-    font-size: 1.2rem;
+    font-size: 18px; /* Prevents iOS zoom */
     font-weight: 600;
     text-align: center;
     color: var(--green-dark);
@@ -332,7 +356,7 @@ section h2 {
     border: 2px solid var(--green-pale);
     border-radius: 8px;
     font-family: inherit;
-    font-size: 1rem;
+    font-size: 16px; /* Prevents iOS zoom */
     resize: vertical;
     color: var(--gray-dark);
 }
@@ -432,11 +456,18 @@ section h2 {
 
 .modal-content input {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     border: 2px solid var(--green-pale);
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 18px; /* Prevents iOS zoom */
     margin-bottom: 16px;
+    text-align: center;
+}
+
+.modal-content input[type="number"] {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--green-dark);
 }
 
 .modal-content input:focus {
