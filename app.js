@@ -31,6 +31,11 @@ const QUALITY_LABELS = {
     5: 'Crushed it'
 };
 
+// Validated CVD-safe categorical palette (fixed order — never cycled/reassigned)
+const CATEGORICAL_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+const OTHER_COLOR = '#c3c2b7';
+const CATEGORY_SLOT_CAP = 8;
+
 let currentDate = new Date();
 let shotTypes = [];
 let categories = [];
@@ -57,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderWeeklyGoalsProgress();
     renderGoalsView();
     renderReportView();
+    renderDashboard();
     restoreActiveTimer();
     setupEventListeners();
     registerServiceWorker();
@@ -599,6 +605,275 @@ function renderWeeklyGoalsProgress() {
         goals.map(g => renderGoalProgressCard(g, weekStart)).join('');
 }
 
+// ==================== Dashboard ====================
+
+function niceCeiling(value) {
+    if (value <= 0) return 1;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+    const residual = value / magnitude;
+    let niceResidual;
+    if (residual <= 1) niceResidual = 1;
+    else if (residual <= 2) niceResidual = 2;
+    else if (residual <= 5) niceResidual = 5;
+    else niceResidual = 10;
+    return niceResidual * magnitude;
+}
+
+function roundedTopBarPath(x, y, w, h, r) {
+    if (h <= 0) return '';
+    r = Math.min(r, w / 2, h);
+    return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
+}
+
+function hexToRgb(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function textColorForBg(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#0b0b0b' : '#ffffff';
+}
+
+function getLastNWeeksData(n) {
+    const currentWeekStart = getWeekStart(new Date());
+    const weeks = [];
+    for (let i = n - 1; i >= 0; i--) {
+        const ws = new Date(currentWeekStart);
+        ws.setDate(ws.getDate() - i * 7);
+        let holes = 0, minutes = 0;
+        for (let d = 0; d < 7; d++) {
+            const day = new Date(ws);
+            day.setDate(ws.getDate() + d);
+            const dateKey = getDateKey(day);
+            holes += getDayData(dateKey).holes || 0;
+            minutes += getPracticeEntries(dateKey).reduce((a, e) => a + e.minutes, 0);
+        }
+        weeks.push({ weekStart: ws, holes, minutes });
+    }
+    return weeks;
+}
+
+function activityLevel(minutes, holes, shots) {
+    const score = minutes + holes * 3 + shots * 0.5;
+    if (score <= 0) return 0;
+    if (score < 30) return 1;
+    if (score < 90) return 2;
+    if (score < 180) return 3;
+    return 4;
+}
+
+function getActivityHeatmapData(weeksCount) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const roughStart = new Date(today);
+    roughStart.setDate(roughStart.getDate() - (weeksCount * 7 - 1));
+    const alignedStart = getWeekStart(roughStart);
+
+    // Aligning back to Sunday can push alignedStart more than weeksCount*7 days
+    // before today, so the day count must be derived from the actual span.
+    const totalDays = Math.round((today - alignedStart) / 86400000) + 1;
+
+    const days = [];
+    for (let i = 0; i < totalDays; i++) {
+        const day = new Date(alignedStart);
+        day.setDate(alignedStart.getDate() + i);
+        const dateKey = getDateKey(day);
+        const data = getDayData(dateKey);
+        const minutes = getPracticeEntries(dateKey).reduce((a, e) => a + e.minutes, 0);
+        const shots = Object.values(data.shots || {}).reduce((a, b) => a + b, 0);
+        days.push({
+            date: day,
+            minutes,
+            holes: data.holes || 0,
+            level: activityLevel(minutes, data.holes || 0, shots)
+        });
+    }
+    return days;
+}
+
+function attachChartInteractions(container) {
+    container.querySelectorAll('[data-label]').forEach(el => {
+        el.addEventListener('click', () => showChartTooltip(el));
+        el.addEventListener('focus', () => showChartTooltip(el));
+        el.addEventListener('mouseenter', () => showChartTooltip(el));
+        el.addEventListener('mouseleave', hideChartTooltip);
+        el.addEventListener('blur', hideChartTooltip);
+    });
+}
+
+function showChartTooltip(el) {
+    const tooltip = document.getElementById('chartTooltip');
+    tooltip.innerHTML = '';
+    const valueEl = document.createElement('strong');
+    valueEl.textContent = el.dataset.value;
+    const labelEl = document.createElement('div');
+    labelEl.textContent = el.dataset.label;
+    tooltip.appendChild(valueEl);
+    tooltip.appendChild(labelEl);
+
+    const rect = el.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+    tooltip.style.top = `${rect.top - 8}px`;
+    tooltip.hidden = false;
+}
+
+function hideChartTooltip() {
+    document.getElementById('chartTooltip').hidden = true;
+}
+
+function renderBarChart(containerId, data, opts) {
+    const container = document.getElementById(containerId);
+    const width = 320, height = 150;
+    const padTop = 18, padBottom = 22, padSide = 4;
+    const chartW = width - padSide * 2;
+    const chartH = height - padTop - padBottom;
+    const n = data.length;
+    const colW = chartW / n;
+    const barW = Math.min(22, colW * 0.55);
+    const maxVal = niceCeiling(Math.max(1, ...data.map(d => d.value)));
+
+    let svg = `<svg viewBox="0 0 ${width} ${height}" class="chart-svg" role="img" aria-label="${escapeHtml(opts.ariaLabel)}">`;
+
+    [1, 0.5].forEach(frac => {
+        const y = padTop + chartH * (1 - frac);
+        svg += `<line x1="${padSide}" y1="${y}" x2="${width - padSide}" y2="${y}" class="chart-gridline" />`;
+        svg += `<text x="${padSide}" y="${y - 3}" class="chart-axis-label">${escapeHtml(opts.formatValue(maxVal * frac))}</text>`;
+    });
+    svg += `<line x1="${padSide}" y1="${padTop + chartH}" x2="${width - padSide}" y2="${padTop + chartH}" class="chart-baseline" />`;
+
+    data.forEach((d, i) => {
+        const cx = padSide + colW * i + colW / 2;
+        const barH = maxVal > 0 ? (d.value / maxVal) * chartH : 0;
+        const y = padTop + chartH - barH;
+        const valueLabel = opts.formatValue(d.value);
+        svg += `<g class="chart-bar-group" tabindex="0" role="button" data-label="${escapeHtml(d.label)}" data-value="${escapeHtml(valueLabel)}">
+            <rect x="${cx - colW / 2}" y="${padTop}" width="${colW}" height="${chartH}" class="chart-hit-area" />
+            <path d="${roundedTopBarPath(cx - barW / 2, y, barW, barH, 4)}" class="chart-bar" />
+            <text x="${cx}" y="${height - 4}" class="chart-x-label">${escapeHtml(d.shortLabel)}</text>
+        </g>`;
+    });
+    svg += `</svg>`;
+    container.innerHTML = svg;
+    attachChartInteractions(container);
+}
+
+function renderActivityHeatmap() {
+    const container = document.getElementById('activityHeatmap');
+    const days = getActivityHeatmapData(12);
+    container.innerHTML = days.map(d => {
+        const dateLabel = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const valueLabel = (d.minutes > 0 || d.holes > 0)
+            ? `${formatMinutes(d.minutes)}${d.holes ? ` · ${d.holes} holes` : ''}`
+            : 'No activity';
+        return `<div class="heat-cell level-${d.level}" tabindex="0" role="button" data-label="${escapeHtml(dateLabel)}" data-value="${escapeHtml(valueLabel)}"></div>`;
+    }).join('');
+    attachChartInteractions(container);
+}
+
+function renderCategoryStackedChart() {
+    const container = document.getElementById('categoryStackedChart');
+    const legendContainer = document.getElementById('categoryLegend');
+    const { categoryTotals } = aggregateMonth(new Date());
+
+    let entries = Object.keys(categoryTotals).map(catId => {
+        const cat = categories.find(c => c.id === catId);
+        return { id: catId, name: cat ? cat.name : catId, minutes: categoryTotals[catId].total };
+    }).sort((a, b) => b.minutes - a.minutes);
+
+    if (!entries.length) {
+        container.innerHTML = '<div class="empty-state">No practice time logged yet this month.</div>';
+        legendContainer.innerHTML = '';
+        return;
+    }
+
+    if (entries.length > CATEGORY_SLOT_CAP) {
+        const shown = entries.slice(0, CATEGORY_SLOT_CAP - 1);
+        const rest = entries.slice(CATEGORY_SLOT_CAP - 1);
+        shown.push({ id: '_other', name: 'Other', minutes: rest.reduce((a, e) => a + e.minutes, 0) });
+        entries = shown;
+    }
+
+    const total = entries.reduce((a, e) => a + e.minutes, 0);
+    const width = 320, height = 40;
+    let x = 0;
+    let svg = `<svg viewBox="0 0 ${width} ${height}" class="chart-svg" role="img" aria-label="Practice time by category this month">`;
+
+    entries.forEach((entry, i) => {
+        const color = entry.id === '_other' ? OTHER_COLOR : CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length];
+        const segW = (entry.minutes / total) * width;
+        const gap = i > 0 ? 2 : 0;
+        const segX = x + gap;
+        const drawW = Math.max(0, segW - gap);
+        const pct = Math.round((entry.minutes / total) * 100);
+        const label = `${formatMinutes(entry.minutes)} · ${pct}%`;
+
+        svg += `<g tabindex="0" role="button" data-label="${escapeHtml(entry.name)}" data-value="${escapeHtml(label)}">
+            <rect x="${segX}" y="0" width="${drawW}" height="${height}" fill="${color}" rx="3" />
+            ${drawW > 30 ? `<text x="${segX + drawW / 2}" y="${height / 2 + 4}" class="chart-segment-label" fill="${textColorForBg(color)}">${pct}%</text>` : ''}
+        </g>`;
+        x += segW;
+    });
+    svg += `</svg>`;
+    container.innerHTML = svg;
+    attachChartInteractions(container);
+
+    legendContainer.innerHTML = entries.map((entry, i) => {
+        const color = entry.id === '_other' ? OTHER_COLOR : CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length];
+        return `<div class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${escapeHtml(entry.name)} · ${formatMinutes(entry.minutes)}</div>`;
+    }).join('');
+}
+
+function renderDashboardKpis() {
+    const container = document.getElementById('dashboardKpis');
+    const streak = calculateStreak();
+    const monthAgg = aggregateMonth(new Date());
+    const currentWeekStart = getWeekStart(new Date());
+    const goals = getGoals(getMonthKey(new Date()));
+    const met = goals.filter(g => computeGoalActual(g, currentWeekStart) >= g.target).length;
+
+    container.innerHTML = `
+        <div class="stat-item"><div class="stat-value">🔥 ${streak}</div><div class="stat-label">Day Streak</div></div>
+        <div class="stat-item"><div class="stat-value">${monthAgg.totalHoles}</div><div class="stat-label">Holes This Month</div></div>
+        <div class="stat-item"><div class="stat-value">${formatMinutes(monthAgg.totalMinutes)}</div><div class="stat-label">Practice This Month</div></div>
+        <div class="stat-item"><div class="stat-value">${goals.length ? `${met}/${goals.length}` : '—'}</div><div class="stat-label">Goals On Track</div></div>
+    `;
+}
+
+function renderDashboardGoals() {
+    const container = document.getElementById('dashboardGoals');
+    const goals = getGoals(getMonthKey(new Date()));
+    if (!goals.length) {
+        container.innerHTML = '<div class="empty-state">No goals set for this month yet. Add one in the Goals tab.</div>';
+        return;
+    }
+    const weekStart = getWeekStart(new Date());
+    container.innerHTML = goals.map(g => renderGoalProgressCard(g, weekStart)).join('');
+}
+
+function renderDashboard() {
+    renderDashboardKpis();
+    renderActivityHeatmap();
+
+    const weeks = getLastNWeeksData(8);
+    const weekLabels = weeks.map(w => ({
+        shortLabel: w.weekStart.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+        label: `Week of ${w.weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    }));
+
+    renderBarChart('holesTrendChart',
+        weeks.map((w, i) => ({ value: w.holes, label: weekLabels[i].label, shortLabel: weekLabels[i].shortLabel })),
+        { ariaLabel: 'Holes played, last 8 weeks', formatValue: v => `${Math.round(v)}` });
+
+    renderBarChart('minutesTrendChart',
+        weeks.map((w, i) => ({ value: w.minutes, label: weekLabels[i].label, shortLabel: weekLabels[i].shortLabel })),
+        { ariaLabel: 'Practice time, last 8 weeks', formatValue: v => formatMinutes(v) });
+
+    renderCategoryStackedChart();
+    renderDashboardGoals();
+}
+
 function renderGoalsView() {
     document.querySelector('#view-goals .month-label').textContent = formatMonthLabel(goalsMonthView);
     const monthKey = getMonthKey(goalsMonthView);
@@ -859,6 +1134,7 @@ function setupEventListeners() {
 
             if (btn.dataset.view === 'goals') renderGoalsView();
             if (btn.dataset.view === 'report') renderReportView();
+            if (btn.dataset.view === 'dashboard') renderDashboard();
         });
     });
 

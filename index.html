@@ -19,15 +19,62 @@
         <header>
             <h1>🏌️ Golf Tracker</h1>
             <nav class="tab-bar">
-                <button class="tab-btn active" data-view="log">Log</button>
+                <button class="tab-btn active" data-view="dashboard">Dashboard</button>
+                <button class="tab-btn" data-view="log">Log</button>
                 <button class="tab-btn" data-view="goals">Goals</button>
                 <button class="tab-btn" data-view="report">Report</button>
             </nav>
         </header>
 
         <main>
+            <!-- ==================== DASHBOARD VIEW ==================== -->
+            <div id="view-dashboard" class="view active">
+                <section class="dashboard-card">
+                    <div class="stats-grid" id="dashboardKpis"></div>
+                </section>
+
+                <section class="dashboard-card">
+                    <h2>Activity <span class="hint">last 12 weeks</span></h2>
+                    <div id="activityHeatmap" class="heatmap"></div>
+                    <div class="heatmap-legend">
+                        <span>Less</span>
+                        <span class="legend-swatch level-0"></span>
+                        <span class="legend-swatch level-1"></span>
+                        <span class="legend-swatch level-2"></span>
+                        <span class="legend-swatch level-3"></span>
+                        <span class="legend-swatch level-4"></span>
+                        <span>More</span>
+                    </div>
+                </section>
+
+                <section class="dashboard-card">
+                    <h2>Holes Played <span class="hint">last 8 weeks</span></h2>
+                    <div id="holesTrendChart"></div>
+                    <p class="hint">Current week is still in progress.</p>
+                </section>
+
+                <section class="dashboard-card">
+                    <h2>Practice Time <span class="hint">last 8 weeks</span></h2>
+                    <div id="minutesTrendChart"></div>
+                    <p class="hint">Current week is still in progress.</p>
+                </section>
+
+                <section class="dashboard-card">
+                    <h2>Practice Breakdown <span class="hint">this month</span></h2>
+                    <div id="categoryStackedChart"></div>
+                    <div id="categoryLegend" class="chart-legend"></div>
+                </section>
+
+                <section class="dashboard-card">
+                    <h2>This Week's Goals</h2>
+                    <div id="dashboardGoals" class="goals-list"></div>
+                </section>
+
+                <p class="hint dashboard-footnote">Exact numbers for every chart are in the Report tab, including CSV export.</p>
+            </div>
+
             <!-- ==================== LOG VIEW ==================== -->
-            <div id="view-log" class="view active">
+            <div id="view-log" class="view">
                 <div class="date-nav">
                     <button id="prevDay" class="nav-btn">◀</button>
                     <span id="currentDate"></span>
@@ -145,6 +192,8 @@
             </div>
             <button id="stopTimerBtn" class="modal-btn delete">Stop</button>
         </div>
+
+        <div id="chartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
 
         <!-- Add Shot Type Modal -->
         <div id="addShotModal" class="modal">
