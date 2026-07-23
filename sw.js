@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golftracker-v1';
+const CACHE_NAME = 'golftracker-v2';
 const urlsToCache = [
     '/golftracker/',
     '/golftracker/index.html',
