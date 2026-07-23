@@ -1,26 +1,18 @@
 // Golf Tracker App
-const DEFAULT_SHOT_TYPES = [
-    { id: 'fullswing', name: 'Full Swing', custom: false },
-    { id: 'drives', name: 'Drives', custom: false },
-    { id: 'pitches', name: 'Pitches', custom: false },
-    { id: 'chips', name: 'Chips', custom: false },
-    { id: 'putts', name: 'Putts', custom: false }
-];
-
 const DEFAULT_CATEGORIES = [
-    { id: 'putting', name: 'Putting', subs: [
-        { id: 'p1', name: '0-5 ft' }, { id: 'p2', name: '5-10 ft' }, { id: 'p3', name: '10-20 ft' }, { id: 'p4', name: '20+ ft' }
-    ] },
-    { id: 'chipping', name: 'Chipping', subs: [
-        { id: 'c1', name: 'Bump & Run' }, { id: 'c2', name: 'Standard' }, { id: 'c3', name: 'Flop' }
-    ] },
+    { id: 'driver', name: 'Driver', subs: [] },
+    { id: 'par3tee', name: 'Par 3 off the Tee', subs: [] },
+    { id: 'ballstriking', name: 'Ball Striking', subs: [] },
     { id: 'approach', name: 'Approach Shots', subs: [
         { id: 'a1', name: '50-75 yds' }, { id: 'a2', name: '75-100 yds' }, { id: 'a3', name: '100-150 yds' }, { id: 'a4', name: '150+ yds' }
     ] },
-    { id: 'fullswing', name: 'Full Swing', subs: [
-        { id: 'f1', name: 'Driver' }, { id: 'f2', name: 'Irons' }
+    { id: 'pitches', name: 'Pitches', subs: [] },
+    { id: 'chips', name: 'Chips', subs: [
+        { id: 'c1', name: 'Bump & Run' }, { id: 'c2', name: 'Standard' }, { id: 'c3', name: 'Flop' }
     ] },
-    { id: 'bunker', name: 'Bunker', subs: [] }
+    { id: 'putts', name: 'Putts', subs: [
+        { id: 'p1', name: '0-5 ft' }, { id: 'p2', name: '5-10 ft' }, { id: 'p3', name: '10-20 ft' }, { id: 'p4', name: '20+ ft' }
+    ] }
 ];
 
 const QUALITY_LABELS = {
@@ -31,21 +23,14 @@ const QUALITY_LABELS = {
     5: 'Crushed it'
 };
 
-// Validated CVD-safe categorical palette (fixed order — never cycled/reassigned)
-const CATEGORICAL_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
-const OTHER_COLOR = '#c3c2b7';
-const CATEGORY_SLOT_CAP = 8;
-
 let currentDate = new Date();
-let shotTypes = [];
 let categories = [];
 let goalsMonthView = new Date();
 let reportMonthView = new Date();
 let activeTimer = null;
 let timerInterval = null;
 
-let deleteTargetId = null;
-let directInputTarget = null; // { type: 'shot'|'holes', id: string|null }
+let directInputTarget = false;
 let logTimeCategoryId = null;
 let editEntryTarget = null; // { dateKey, entryId }
 let editingGoalId = null;
@@ -53,10 +38,8 @@ let goalModalMonthKey = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadShotTypes();
     loadCategories();
     renderDate();
-    renderShotGrid();
     loadDayData();
     updateWeeklyStats();
     renderWeeklyGoalsProgress();
@@ -142,20 +125,6 @@ function downloadFile(filename, content) {
 
 // ==================== Storage ====================
 
-function loadShotTypes() {
-    const saved = localStorage.getItem('golftracker_shottypes');
-    if (saved) {
-        shotTypes = JSON.parse(saved);
-    } else {
-        shotTypes = [...DEFAULT_SHOT_TYPES];
-        saveShotTypes();
-    }
-}
-
-function saveShotTypes() {
-    localStorage.setItem('golftracker_shottypes', JSON.stringify(shotTypes));
-}
-
 function loadCategories() {
     const saved = localStorage.getItem('golftracker_categories');
     if (saved) {
@@ -174,7 +143,6 @@ function getDayData(dateKey) {
     const data = localStorage.getItem(`golftracker_${dateKey}`);
     return data ? JSON.parse(data) : {
         sessionType: 'practice',
-        shots: {},
         holes: 0,
         quality: 0,
         notes: ''
@@ -214,34 +182,12 @@ function renderDate() {
     nextBtn.style.opacity = nextBtn.disabled ? '0.3' : '1';
 }
 
-function renderShotGrid() {
-    const grid = document.getElementById('shotGrid');
-    grid.innerHTML = shotTypes.map(shot => `
-        <div class="shot-card ${shot.custom ? 'custom' : ''}" data-shot-id="${shot.id}">
-            ${shot.custom ? `<button class="delete-btn" data-delete-id="${shot.id}">✕</button>` : ''}
-            <div class="shot-name">${escapeHtml(shot.name)}</div>
-            <div class="shot-counter">
-                <button class="counter-btn minus" data-shot="${shot.id}">−</button>
-                <span class="shot-count" id="count-${shot.id}">0</span>
-                <button class="counter-btn plus" data-shot="${shot.id}">+</button>
-            </div>
-        </div>
-    `).join('');
-}
-
 function loadDayData() {
     const dateKey = getDateKey(currentDate);
     const data = getDayData(dateKey);
 
     document.querySelectorAll('.session-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.type === data.sessionType);
-    });
-
-    shotTypes.forEach(shot => {
-        const countEl = document.getElementById(`count-${shot.id}`);
-        if (countEl) {
-            countEl.textContent = data.shots[shot.id] || 0;
-        }
     });
 
     document.getElementById('holesCount').textContent = data.holes || 0;
@@ -255,38 +201,6 @@ function loadDayData() {
     document.getElementById('sessionNotes').value = data.notes || '';
 
     renderCategoryList();
-}
-
-function updateShotCount(shotId, delta) {
-    const dateKey = getDateKey(currentDate);
-    const data = getDayData(dateKey);
-
-    if (!data.shots[shotId]) data.shots[shotId] = 0;
-    data.shots[shotId] = Math.max(0, data.shots[shotId] + delta);
-
-    saveDayData(dateKey, data);
-
-    const countEl = document.getElementById(`count-${shotId}`);
-    if (countEl) {
-        countEl.textContent = data.shots[shotId];
-    }
-
-    updateWeeklyStats();
-}
-
-function setDirectShotCount(shotId, value) {
-    const dateKey = getDateKey(currentDate);
-    const data = getDayData(dateKey);
-
-    data.shots[shotId] = Math.max(0, value);
-    saveDayData(dateKey, data);
-
-    const countEl = document.getElementById(`count-${shotId}`);
-    if (countEl) {
-        countEl.textContent = data.shots[shotId];
-    }
-
-    updateWeeklyStats();
 }
 
 function updateHoles(delta) {
@@ -458,16 +372,14 @@ function stopTimer() {
 
 function dayHasActivity(dateKey) {
     const data = getDayData(dateKey);
-    const shotsTotal = Object.values(data.shots || {}).reduce((a, b) => a + b, 0);
     const minutesTotal = getPracticeEntries(dateKey).reduce((a, e) => a + e.minutes, 0);
-    return shotsTotal > 0 || (data.holes || 0) > 0 || minutesTotal > 0;
+    return (data.holes || 0) > 0 || minutesTotal > 0;
 }
 
 function updateWeeklyStats() {
     const today = new Date();
     const weekStart = getWeekStart(today);
 
-    let totalShots = 0;
     let totalHoles = 0;
     let totalMinutes = 0;
     let practiceDays = 0;
@@ -478,23 +390,17 @@ function updateWeeklyStats() {
         const dateKey = getDateKey(date);
         const data = getDayData(dateKey);
 
-        const dayShots = Object.values(data.shots || {}).reduce((a, b) => a + b, 0);
         const dayMinutes = getPracticeEntries(dateKey).reduce((a, e) => a + e.minutes, 0);
 
-        totalShots += dayShots;
         totalHoles += data.holes || 0;
         totalMinutes += dayMinutes;
 
-        if (dayShots > 0 || data.holes > 0 || dayMinutes > 0) {
+        if (data.holes > 0 || dayMinutes > 0) {
             practiceDays++;
         }
     }
 
     document.getElementById('weeklyStats').innerHTML = `
-        <div class="stat-item">
-            <div class="stat-value">${totalShots}</div>
-            <div class="stat-label">Total Shots</div>
-        </div>
         <div class="stat-item">
             <div class="stat-value">${totalHoles}</div>
             <div class="stat-label">Holes</div>
@@ -607,271 +513,55 @@ function renderWeeklyGoalsProgress() {
 
 // ==================== Dashboard ====================
 
-function niceCeiling(value) {
-    if (value <= 0) return 1;
-    const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
-    const residual = value / magnitude;
-    let niceResidual;
-    if (residual <= 1) niceResidual = 1;
-    else if (residual <= 2) niceResidual = 2;
-    else if (residual <= 5) niceResidual = 5;
-    else niceResidual = 10;
-    return niceResidual * magnitude;
-}
-
-function roundedTopBarPath(x, y, w, h, r) {
-    if (h <= 0) return '';
-    r = Math.min(r, w / 2, h);
-    return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
-}
-
-function hexToRgb(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-function textColorForBg(hex) {
-    const { r, g, b } = hexToRgb(hex);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6 ? '#0b0b0b' : '#ffffff';
-}
-
-function getLastNWeeksData(n) {
-    const currentWeekStart = getWeekStart(new Date());
-    const weeks = [];
-    for (let i = n - 1; i >= 0; i--) {
-        const ws = new Date(currentWeekStart);
-        ws.setDate(ws.getDate() - i * 7);
-        let holes = 0, minutes = 0;
-        for (let d = 0; d < 7; d++) {
-            const day = new Date(ws);
-            day.setDate(ws.getDate() + d);
-            const dateKey = getDateKey(day);
-            holes += getDayData(dateKey).holes || 0;
-            minutes += getPracticeEntries(dateKey).reduce((a, e) => a + e.minutes, 0);
-        }
-        weeks.push({ weekStart: ws, holes, minutes });
-    }
-    return weeks;
-}
-
-function activityLevel(minutes, holes, shots) {
-    const score = minutes + holes * 3 + shots * 0.5;
-    if (score <= 0) return 0;
-    if (score < 30) return 1;
-    if (score < 90) return 2;
-    if (score < 180) return 3;
-    return 4;
-}
-
-function getActivityHeatmapData(weeksCount) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const roughStart = new Date(today);
-    roughStart.setDate(roughStart.getDate() - (weeksCount * 7 - 1));
-    const alignedStart = getWeekStart(roughStart);
-
-    // Aligning back to Sunday can push alignedStart more than weeksCount*7 days
-    // before today, so the day count must be derived from the actual span.
-    const totalDays = Math.round((today - alignedStart) / 86400000) + 1;
-
-    const days = [];
-    for (let i = 0; i < totalDays; i++) {
-        const day = new Date(alignedStart);
-        day.setDate(alignedStart.getDate() + i);
-        const dateKey = getDateKey(day);
-        const data = getDayData(dateKey);
-        const minutes = getPracticeEntries(dateKey).reduce((a, e) => a + e.minutes, 0);
-        const shots = Object.values(data.shots || {}).reduce((a, b) => a + b, 0);
-        days.push({
-            date: day,
-            minutes,
-            holes: data.holes || 0,
-            level: activityLevel(minutes, data.holes || 0, shots)
-        });
-    }
-    return days;
-}
-
-function attachChartInteractions(container) {
-    container.querySelectorAll('[data-label]').forEach(el => {
-        el.addEventListener('click', () => showChartTooltip(el));
-        el.addEventListener('focus', () => showChartTooltip(el));
-        el.addEventListener('mouseenter', () => showChartTooltip(el));
-        el.addEventListener('mouseleave', hideChartTooltip);
-        el.addEventListener('blur', hideChartTooltip);
-    });
-}
-
-function showChartTooltip(el) {
-    const tooltip = document.getElementById('chartTooltip');
-    tooltip.innerHTML = '';
-    const valueEl = document.createElement('strong');
-    valueEl.textContent = el.dataset.value;
-    const labelEl = document.createElement('div');
-    labelEl.textContent = el.dataset.label;
-    tooltip.appendChild(valueEl);
-    tooltip.appendChild(labelEl);
-
-    const rect = el.getBoundingClientRect();
-    tooltip.style.left = `${rect.left + rect.width / 2}px`;
-    tooltip.style.top = `${rect.top - 8}px`;
-    tooltip.hidden = false;
-}
-
-function hideChartTooltip() {
-    document.getElementById('chartTooltip').hidden = true;
-}
-
-function renderBarChart(containerId, data, opts) {
-    const container = document.getElementById(containerId);
-    const width = 320, height = 150;
-    const padTop = 18, padBottom = 22, padSide = 4;
-    const chartW = width - padSide * 2;
-    const chartH = height - padTop - padBottom;
-    const n = data.length;
-    const colW = chartW / n;
-    const barW = Math.min(22, colW * 0.55);
-    const maxVal = niceCeiling(Math.max(1, ...data.map(d => d.value)));
-
-    let svg = `<svg viewBox="0 0 ${width} ${height}" class="chart-svg" role="img" aria-label="${escapeHtml(opts.ariaLabel)}">`;
-
-    [1, 0.5].forEach(frac => {
-        const y = padTop + chartH * (1 - frac);
-        svg += `<line x1="${padSide}" y1="${y}" x2="${width - padSide}" y2="${y}" class="chart-gridline" />`;
-        svg += `<text x="${padSide}" y="${y - 3}" class="chart-axis-label">${escapeHtml(opts.formatValue(maxVal * frac))}</text>`;
-    });
-    svg += `<line x1="${padSide}" y1="${padTop + chartH}" x2="${width - padSide}" y2="${padTop + chartH}" class="chart-baseline" />`;
-
-    data.forEach((d, i) => {
-        const cx = padSide + colW * i + colW / 2;
-        const barH = maxVal > 0 ? (d.value / maxVal) * chartH : 0;
-        const y = padTop + chartH - barH;
-        const valueLabel = opts.formatValue(d.value);
-        svg += `<g class="chart-bar-group" tabindex="0" role="button" data-label="${escapeHtml(d.label)}" data-value="${escapeHtml(valueLabel)}">
-            <rect x="${cx - colW / 2}" y="${padTop}" width="${colW}" height="${chartH}" class="chart-hit-area" />
-            <path d="${roundedTopBarPath(cx - barW / 2, y, barW, barH, 4)}" class="chart-bar" />
-            <text x="${cx}" y="${height - 4}" class="chart-x-label">${escapeHtml(d.shortLabel)}</text>
-        </g>`;
-    });
-    svg += `</svg>`;
-    container.innerHTML = svg;
-    attachChartInteractions(container);
-}
-
-function renderActivityHeatmap() {
-    const container = document.getElementById('activityHeatmap');
-    const days = getActivityHeatmapData(12);
-    container.innerHTML = days.map(d => {
-        const dateLabel = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const valueLabel = (d.minutes > 0 || d.holes > 0)
-            ? `${formatMinutes(d.minutes)}${d.holes ? ` · ${d.holes} holes` : ''}`
-            : 'No activity';
-        return `<div class="heat-cell level-${d.level}" tabindex="0" role="button" data-label="${escapeHtml(dateLabel)}" data-value="${escapeHtml(valueLabel)}"></div>`;
-    }).join('');
-    attachChartInteractions(container);
-}
-
-function renderCategoryStackedChart() {
-    const container = document.getElementById('categoryStackedChart');
-    const legendContainer = document.getElementById('categoryLegend');
-    const { categoryTotals } = aggregateMonth(new Date());
-
-    let entries = Object.keys(categoryTotals).map(catId => {
-        const cat = categories.find(c => c.id === catId);
-        return { id: catId, name: cat ? cat.name : catId, minutes: categoryTotals[catId].total };
-    }).sort((a, b) => b.minutes - a.minutes);
-
-    if (!entries.length) {
-        container.innerHTML = '<div class="empty-state">No practice time logged yet this month.</div>';
-        legendContainer.innerHTML = '';
-        return;
-    }
-
-    if (entries.length > CATEGORY_SLOT_CAP) {
-        const shown = entries.slice(0, CATEGORY_SLOT_CAP - 1);
-        const rest = entries.slice(CATEGORY_SLOT_CAP - 1);
-        shown.push({ id: '_other', name: 'Other', minutes: rest.reduce((a, e) => a + e.minutes, 0) });
-        entries = shown;
-    }
-
-    const total = entries.reduce((a, e) => a + e.minutes, 0);
-    const width = 320, height = 40;
-    let x = 0;
-    let svg = `<svg viewBox="0 0 ${width} ${height}" class="chart-svg" role="img" aria-label="Practice time by category this month">`;
-
-    entries.forEach((entry, i) => {
-        const color = entry.id === '_other' ? OTHER_COLOR : CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length];
-        const segW = (entry.minutes / total) * width;
-        const gap = i > 0 ? 2 : 0;
-        const segX = x + gap;
-        const drawW = Math.max(0, segW - gap);
-        const pct = Math.round((entry.minutes / total) * 100);
-        const label = `${formatMinutes(entry.minutes)} · ${pct}%`;
-
-        svg += `<g tabindex="0" role="button" data-label="${escapeHtml(entry.name)}" data-value="${escapeHtml(label)}">
-            <rect x="${segX}" y="0" width="${drawW}" height="${height}" fill="${color}" rx="3" />
-            ${drawW > 30 ? `<text x="${segX + drawW / 2}" y="${height / 2 + 4}" class="chart-segment-label" fill="${textColorForBg(color)}">${pct}%</text>` : ''}
-        </g>`;
-        x += segW;
-    });
-    svg += `</svg>`;
-    container.innerHTML = svg;
-    attachChartInteractions(container);
-
-    legendContainer.innerHTML = entries.map((entry, i) => {
-        const color = entry.id === '_other' ? OTHER_COLOR : CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length];
-        return `<div class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${escapeHtml(entry.name)} · ${formatMinutes(entry.minutes)}</div>`;
-    }).join('');
-}
-
-function renderDashboardKpis() {
-    const container = document.getElementById('dashboardKpis');
-    const streak = calculateStreak();
-    const monthAgg = aggregateMonth(new Date());
-    const currentWeekStart = getWeekStart(new Date());
+function renderMetricRow(label, metric, weekStart) {
     const goals = getGoals(getMonthKey(new Date()));
-    const met = goals.filter(g => computeGoalActual(g, currentWeekStart) >= g.target).length;
+    const goal = goals.find(g => g.metric === metric);
+    const actual = computeGoalActual({ metric }, weekStart);
+    const isTime = metric === 'minutes';
+    const actualLabel = isTime ? formatMinutes(actual) : `${actual} holes`;
 
-    container.innerHTML = `
-        <div class="stat-item"><div class="stat-value">🔥 ${streak}</div><div class="stat-label">Day Streak</div></div>
-        <div class="stat-item"><div class="stat-value">${monthAgg.totalHoles}</div><div class="stat-label">Holes This Month</div></div>
-        <div class="stat-item"><div class="stat-value">${formatMinutes(monthAgg.totalMinutes)}</div><div class="stat-label">Practice This Month</div></div>
-        <div class="stat-item"><div class="stat-value">${goals.length ? `${met}/${goals.length}` : '—'}</div><div class="stat-label">Goals On Track</div></div>
-    `;
-}
-
-function renderDashboardGoals() {
-    const container = document.getElementById('dashboardGoals');
-    const goals = getGoals(getMonthKey(new Date()));
-    if (!goals.length) {
-        container.innerHTML = '<div class="empty-state">No goals set for this month yet. Add one in the Goals tab.</div>';
-        return;
+    if (!goal) {
+        return `<div class="goal-card">
+            <div class="goal-card-header">
+                <span class="goal-name">${escapeHtml(label)}</span>
+                <span class="goal-amounts">${actualLabel}</span>
+            </div>
+            <div class="goal-remaining">No goal set — add one in the Goals tab.</div>
+        </div>`;
     }
-    const weekStart = getWeekStart(new Date());
-    container.innerHTML = goals.map(g => renderGoalProgressCard(g, weekStart)).join('');
+
+    const pct = goal.target > 0 ? Math.min(100, Math.round((actual / goal.target) * 100)) : 0;
+    const targetLabel = isTime ? formatMinutes(goal.target) : `${goal.target} holes`;
+    const remaining = Math.max(0, goal.target - actual);
+    const remainingLabel = remaining === 0
+        ? '🎉 Goal complete!'
+        : `${isTime ? formatMinutes(remaining) : remaining + ' holes'} to go`;
+
+    return `<div class="goal-card">
+        <div class="goal-card-header">
+            <span class="goal-name">${escapeHtml(label)}</span>
+            <span class="goal-amounts">${actualLabel} / ${targetLabel}</span>
+        </div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill ${pct >= 100 ? 'complete' : ''}" style="width:${pct}%"></div>
+        </div>
+        <div class="goal-remaining">${remainingLabel}</div>
+    </div>`;
 }
 
 function renderDashboard() {
-    renderDashboardKpis();
-    renderActivityHeatmap();
+    const now = new Date();
+    document.getElementById('dashMonth').textContent = now.toLocaleDateString('en-US', { month: 'long' });
 
-    const weeks = getLastNWeeksData(8);
-    const weekLabels = weeks.map(w => ({
-        shortLabel: w.weekStart.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
-        label: `Week of ${w.weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-    }));
+    const weekStart = getWeekStart(now);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    document.getElementById('dashWeek').textContent =
+        `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
-    renderBarChart('holesTrendChart',
-        weeks.map((w, i) => ({ value: w.holes, label: weekLabels[i].label, shortLabel: weekLabels[i].shortLabel })),
-        { ariaLabel: 'Holes played, last 8 weeks', formatValue: v => `${Math.round(v)}` });
-
-    renderBarChart('minutesTrendChart',
-        weeks.map((w, i) => ({ value: w.minutes, label: weekLabels[i].label, shortLabel: weekLabels[i].shortLabel })),
-        { ariaLabel: 'Practice time, last 8 weeks', formatValue: v => formatMinutes(v) });
-
-    renderCategoryStackedChart();
-    renderDashboardGoals();
+    document.getElementById('dashboardMetrics').innerHTML =
+        renderMetricRow('Hours Practiced', 'minutes', weekStart) +
+        renderMetricRow('Holes Played', 'holes', weekStart);
 }
 
 function renderGoalsView() {
@@ -1190,26 +880,6 @@ function setupEventListeners() {
         });
     });
 
-    // Shot counters (delegated)
-    document.getElementById('shotGrid').addEventListener('click', (e) => {
-        if (e.target.classList.contains('counter-btn')) {
-            const shotId = e.target.dataset.shot;
-            const delta = e.target.classList.contains('plus') ? 1 : -1;
-            updateShotCount(shotId, delta);
-        }
-        if (e.target.classList.contains('shot-count')) {
-            const shotId = e.target.id.replace('count-', '');
-            const shot = shotTypes.find(s => s.id === shotId);
-            openDirectInput('shot', shotId, shot?.name || 'Shots', parseInt(e.target.textContent) || 0);
-        }
-        if (e.target.classList.contains('delete-btn')) {
-            deleteTargetId = e.target.dataset.deleteId;
-            const shot = shotTypes.find(s => s.id === deleteTargetId);
-            document.getElementById('deleteShotName').textContent = `"${shot?.name}"`;
-            document.getElementById('deleteShotModal').classList.add('active');
-        }
-    });
-
     // Holes counter
     document.querySelector('.holes-counter').addEventListener('click', (e) => {
         if (e.target.classList.contains('counter-btn')) {
@@ -1217,7 +887,7 @@ function setupEventListeners() {
             updateHoles(delta);
         }
         if (e.target.id === 'holesCount') {
-            openDirectInput('holes', null, 'Holes Played', parseInt(e.target.textContent) || 0);
+            openDirectInput('Holes Played', parseInt(e.target.textContent) || 0);
         }
     });
 
@@ -1493,46 +1163,6 @@ function setupEventListeners() {
         saveDayData(dateKey, data);
     });
 
-    // Add shot type modal
-    document.getElementById('addShotType').addEventListener('click', () => {
-        document.getElementById('newShotName').value = '';
-        document.getElementById('addShotModal').classList.add('active');
-        document.getElementById('newShotName').focus();
-    });
-
-    document.getElementById('cancelAddShot').addEventListener('click', () => {
-        document.getElementById('addShotModal').classList.remove('active');
-    });
-
-    document.getElementById('confirmAddShot').addEventListener('click', () => {
-        const name = document.getElementById('newShotName').value.trim();
-        if (name) {
-            const id = 'custom_' + Date.now();
-            shotTypes.push({ id, name, custom: true });
-            saveShotTypes();
-            renderShotGrid();
-            loadDayData();
-        }
-        document.getElementById('addShotModal').classList.remove('active');
-    });
-
-    // Delete shot type modal
-    document.getElementById('cancelDeleteShot').addEventListener('click', () => {
-        document.getElementById('deleteShotModal').classList.remove('active');
-        deleteTargetId = null;
-    });
-
-    document.getElementById('confirmDeleteShot').addEventListener('click', () => {
-        if (deleteTargetId) {
-            shotTypes = shotTypes.filter(s => s.id !== deleteTargetId);
-            saveShotTypes();
-            renderShotGrid();
-            loadDayData();
-        }
-        document.getElementById('deleteShotModal').classList.remove('active');
-        deleteTargetId = null;
-    });
-
     // Close modals on backdrop click
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
@@ -1542,30 +1172,19 @@ function setupEventListeners() {
         });
     });
 
-    // Enter key in modal
-    document.getElementById('newShotName').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('confirmAddShot').click();
-        }
-    });
-
     // Direct input modal
     document.getElementById('cancelDirectInput').addEventListener('click', () => {
         document.getElementById('directInputModal').classList.remove('active');
-        directInputTarget = null;
+        directInputTarget = false;
     });
 
     document.getElementById('confirmDirectInput').addEventListener('click', () => {
         const value = parseInt(document.getElementById('directInputValue').value) || 0;
         if (directInputTarget) {
-            if (directInputTarget.type === 'shot') {
-                setDirectShotCount(directInputTarget.id, value);
-            } else if (directInputTarget.type === 'holes') {
-                setHoles(value);
-            }
+            setHoles(value);
         }
         document.getElementById('directInputModal').classList.remove('active');
-        directInputTarget = null;
+        directInputTarget = false;
     });
 
     document.getElementById('directInputValue').addEventListener('keypress', (e) => {
@@ -1575,8 +1194,8 @@ function setupEventListeners() {
     });
 }
 
-function openDirectInput(type, id, label, currentValue) {
-    directInputTarget = { type, id };
+function openDirectInput(label, currentValue) {
+    directInputTarget = true;
     document.getElementById('directInputTitle').textContent = label;
     document.getElementById('directInputValue').value = currentValue;
     document.getElementById('directInputModal').classList.add('active');

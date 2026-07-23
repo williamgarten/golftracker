@@ -29,48 +29,12 @@
         <main>
             <!-- ==================== DASHBOARD VIEW ==================== -->
             <div id="view-dashboard" class="view active">
-                <section class="dashboard-card">
-                    <div class="stats-grid" id="dashboardKpis"></div>
-                </section>
+                <div class="dash-header">
+                    <div class="dash-month" id="dashMonth"></div>
+                    <div class="dash-week" id="dashWeek"></div>
+                </div>
 
-                <section class="dashboard-card">
-                    <h2>Activity <span class="hint">last 12 weeks</span></h2>
-                    <div id="activityHeatmap" class="heatmap"></div>
-                    <div class="heatmap-legend">
-                        <span>Less</span>
-                        <span class="legend-swatch level-0"></span>
-                        <span class="legend-swatch level-1"></span>
-                        <span class="legend-swatch level-2"></span>
-                        <span class="legend-swatch level-3"></span>
-                        <span class="legend-swatch level-4"></span>
-                        <span>More</span>
-                    </div>
-                </section>
-
-                <section class="dashboard-card">
-                    <h2>Holes Played <span class="hint">last 8 weeks</span></h2>
-                    <div id="holesTrendChart"></div>
-                    <p class="hint">Current week is still in progress.</p>
-                </section>
-
-                <section class="dashboard-card">
-                    <h2>Practice Time <span class="hint">last 8 weeks</span></h2>
-                    <div id="minutesTrendChart"></div>
-                    <p class="hint">Current week is still in progress.</p>
-                </section>
-
-                <section class="dashboard-card">
-                    <h2>Practice Breakdown <span class="hint">this month</span></h2>
-                    <div id="categoryStackedChart"></div>
-                    <div id="categoryLegend" class="chart-legend"></div>
-                </section>
-
-                <section class="dashboard-card">
-                    <h2>This Week's Goals</h2>
-                    <div id="dashboardGoals" class="goals-list"></div>
-                </section>
-
-                <p class="hint dashboard-footnote">Exact numbers for every chart are in the Report tab, including CSV export.</p>
+                <div id="dashboardMetrics" class="goals-list"></div>
             </div>
 
             <!-- ==================== LOG VIEW ==================== -->
@@ -85,12 +49,6 @@
                     <button class="session-btn active" data-type="practice">Practice</button>
                     <button class="session-btn" data-type="round">Round</button>
                 </div>
-
-                <section class="shot-counters">
-                    <h2>Shots</h2>
-                    <div id="shotGrid" class="shot-grid"></div>
-                    <button id="addShotType" class="add-btn">+ Add Shot Type</button>
-                </section>
 
                 <section class="holes-section">
                     <h2>Holes Played</h2>
@@ -191,32 +149,6 @@
                 <span id="activeTimerElapsed">00:00</span>
             </div>
             <button id="stopTimerBtn" class="modal-btn delete">Stop</button>
-        </div>
-
-        <div id="chartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
-
-        <!-- Add Shot Type Modal -->
-        <div id="addShotModal" class="modal">
-            <div class="modal-content">
-                <h3>Add Shot Type</h3>
-                <input type="text" id="newShotName" placeholder="Shot name (e.g., Bunker, Flop)">
-                <div class="modal-buttons">
-                    <button id="cancelAddShot" class="modal-btn cancel">Cancel</button>
-                    <button id="confirmAddShot" class="modal-btn confirm">Add</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delete Shot Type Modal -->
-        <div id="deleteShotModal" class="modal">
-            <div class="modal-content">
-                <h3>Delete Shot Type?</h3>
-                <p id="deleteShotName"></p>
-                <div class="modal-buttons">
-                    <button id="cancelDeleteShot" class="modal-btn cancel">Cancel</button>
-                    <button id="confirmDeleteShot" class="modal-btn delete">Delete</button>
-                </div>
-            </div>
         </div>
 
         <!-- Direct Input Modal -->
