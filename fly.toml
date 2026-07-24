@@ -1,0 +1,28 @@
+# fly.toml app configuration for golftracker
+# Rename `app` to something unique to you before your first `fly launch`/`fly deploy`.
+
+app = "golftracker"
+primary_region = "iad"
+
+[build]
+
+[deploy]
+  release_command = "node server/dist/db/migrate.js"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  COOKIE_SECURE = "true"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
