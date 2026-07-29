@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: golftracker
+      POSTGRES_PASSWORD: golftracker
+      POSTGRES_DB: golftracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - golftracker-pgdata:/var/lib/postgresql/data
+
+volumes:
+  golftracker-pgdata:
