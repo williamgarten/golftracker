@@ -18,105 +18,137 @@
     <div class="app">
         <header>
             <h1>🏌️ Golf Tracker</h1>
-            <div class="date-nav">
-                <button id="prevDay" class="nav-btn">◀</button>
-                <span id="currentDate"></span>
-                <button id="nextDay" class="nav-btn">▶</button>
-            </div>
+            <nav class="tab-bar">
+                <button class="tab-btn active" data-view="dashboard">Dashboard</button>
+                <button class="tab-btn" data-view="log">Log</button>
+                <button class="tab-btn" data-view="goals">Goals</button>
+                <button class="tab-btn" data-view="report">Report</button>
+            </nav>
         </header>
 
         <main>
-            <!-- Session Type Toggle -->
-            <div class="session-type">
-                <button class="session-btn active" data-type="practice">Practice</button>
-                <button class="session-btn" data-type="round">Round</button>
+            <!-- ==================== DASHBOARD VIEW ==================== -->
+            <div id="view-dashboard" class="view active">
+                <div class="dash-header">
+                    <div class="dash-month" id="dashMonth"></div>
+                    <div class="dash-week" id="dashWeek"></div>
+                </div>
+
+                <div id="dashboardMetrics" class="goals-list"></div>
             </div>
 
-            <!-- Shot Counters -->
-            <section class="shot-counters">
-                <h2>Shots</h2>
-                <div id="shotGrid" class="shot-grid">
-                    <!-- Dynamically populated -->
+            <!-- ==================== LOG VIEW ==================== -->
+            <div id="view-log" class="view">
+                <div class="date-nav">
+                    <button id="prevDay" class="nav-btn">◀</button>
+                    <span id="currentDate"></span>
+                    <button id="nextDay" class="nav-btn">▶</button>
                 </div>
-                <button id="addShotType" class="add-btn">+ Add Shot Type</button>
-            </section>
 
-            <!-- Holes Played -->
-            <section class="holes-section">
-                <h2>Holes Played</h2>
-                <div class="holes-counter">
-                    <button class="counter-btn minus" data-target="holes">−</button>
-                    <span id="holesCount" class="count">0</span>
-                    <button class="counter-btn plus" data-target="holes">+</button>
+                <div class="session-type">
+                    <button class="session-btn active" data-type="practice">Practice</button>
+                    <button class="session-btn" data-type="round">Round</button>
                 </div>
-                <div class="quick-holes">
-                    <button class="quick-btn" data-holes="9">9</button>
-                    <button class="quick-btn" data-holes="18">18</button>
-                </div>
-            </section>
 
-            <!-- Time Spent -->
-            <section class="time-section">
-                <h2>Time Spent</h2>
-                <div class="time-input">
-                    <input type="number" id="timeHours" min="0" max="12" placeholder="0"> h
-                    <input type="number" id="timeMinutes" min="0" max="59" placeholder="0"> m
-                </div>
-            </section>
+                <section class="holes-section">
+                    <h2>Holes Played</h2>
+                    <div class="holes-counter">
+                        <button class="counter-btn minus" data-target="holes">−</button>
+                        <span id="holesCount" class="count">0</span>
+                        <button class="counter-btn plus" data-target="holes">+</button>
+                    </div>
+                    <div class="quick-holes">
+                        <button class="quick-btn" data-holes="9">9</button>
+                        <button class="quick-btn" data-holes="18">18</button>
+                    </div>
+                </section>
 
-            <!-- Quality Rating -->
-            <section class="quality-section">
-                <h2>Session Quality</h2>
-                <div class="quality-rating" id="qualityRating">
-                    <button class="quality-btn" data-rating="1">1</button>
-                    <button class="quality-btn" data-rating="2">2</button>
-                    <button class="quality-btn" data-rating="3">3</button>
-                    <button class="quality-btn" data-rating="4">4</button>
-                    <button class="quality-btn" data-rating="5">5</button>
-                </div>
-                <p class="quality-label" id="qualityLabel">Tap to rate</p>
-            </section>
+                <section class="practice-section">
+                    <h2>Practice Time</h2>
+                    <div id="categoryList" class="category-list"></div>
+                    <button id="manageCategories" class="add-btn">Manage Categories</button>
+                </section>
 
-            <!-- Notes -->
-            <section class="notes-section">
-                <h2>Session Notes</h2>
-                <textarea id="sessionNotes" placeholder="What were you working on? (tempo, grip, alignment, short game focus...)"></textarea>
-            </section>
+                <section class="quality-section">
+                    <h2>Session Quality</h2>
+                    <div class="quality-rating" id="qualityRating">
+                        <button class="quality-btn" data-rating="1">1</button>
+                        <button class="quality-btn" data-rating="2">2</button>
+                        <button class="quality-btn" data-rating="3">3</button>
+                        <button class="quality-btn" data-rating="4">4</button>
+                        <button class="quality-btn" data-rating="5">5</button>
+                    </div>
+                    <p class="quality-label" id="qualityLabel">Tap to rate</p>
+                </section>
 
-            <!-- Stats -->
-            <section class="stats-section">
-                <h2>This Week</h2>
-                <div class="stats-grid" id="weeklyStats">
-                    <!-- Dynamically populated -->
+                <section class="notes-section">
+                    <h2>Session Notes</h2>
+                    <textarea id="sessionNotes" placeholder="What were you working on? (tempo, grip, alignment, short game focus...)"></textarea>
+                </section>
+
+                <section class="stats-section">
+                    <h2>This Week</h2>
+                    <div class="stats-grid" id="weeklyStats"></div>
+                    <div id="weeklyGoalsProgress" class="goals-progress"></div>
+                    <div class="streak" id="streakDisplay"></div>
+                </section>
+            </div>
+
+            <!-- ==================== GOALS VIEW ==================== -->
+            <div id="view-goals" class="view">
+                <div class="month-nav" data-nav="goals">
+                    <button class="nav-btn month-prev">◀</button>
+                    <span class="month-label"></span>
+                    <button class="nav-btn month-next">▶</button>
                 </div>
-                <div class="streak" id="streakDisplay">
-                    <!-- Streak info -->
+
+                <section class="goals-section">
+                    <h2>Weekly Goals <span class="hint">this month</span></h2>
+                    <div id="goalsList" class="goals-list"></div>
+                    <div id="goalsEmptyActions" class="empty-actions" style="display:none;">
+                        <button id="copyLastMonthGoals" class="add-btn">Copy Last Month's Goals</button>
+                    </div>
+                    <button id="addGoalBtn" class="add-btn">+ Add Goal</button>
+                </section>
+            </div>
+
+            <!-- ==================== REPORT VIEW ==================== -->
+            <div id="view-report" class="view">
+                <div class="month-nav" data-nav="report">
+                    <button class="nav-btn month-prev">◀</button>
+                    <span class="month-label"></span>
+                    <button class="nav-btn month-next">▶</button>
                 </div>
-            </section>
+
+                <section class="report-summary">
+                    <h2>Month Summary</h2>
+                    <div id="reportSummary" class="stats-grid"></div>
+                </section>
+
+                <section class="report-weekly">
+                    <h2>Weekly Breakdown</h2>
+                    <div id="reportWeekly" class="report-table"></div>
+                </section>
+
+                <section class="report-categories">
+                    <h2>Practice Breakdown</h2>
+                    <div id="reportCategories" class="report-table"></div>
+                </section>
+
+                <div class="export-buttons">
+                    <button id="exportCsv" class="modal-btn confirm">Export CSV</button>
+                    <button id="printReport" class="modal-btn confirm">Print / Save PDF</button>
+                </div>
+            </div>
         </main>
 
-        <!-- Add Shot Type Modal -->
-        <div id="addShotModal" class="modal">
-            <div class="modal-content">
-                <h3>Add Shot Type</h3>
-                <input type="text" id="newShotName" placeholder="Shot name (e.g., Bunker, Flop)">
-                <div class="modal-buttons">
-                    <button id="cancelAddShot" class="modal-btn cancel">Cancel</button>
-                    <button id="confirmAddShot" class="modal-btn confirm">Add</button>
-                </div>
+        <!-- Active Timer Bar -->
+        <div id="activeTimerBar" class="active-timer-bar" style="display:none;">
+            <div class="timer-info">
+                <span id="activeTimerLabel">Putting</span>
+                <span id="activeTimerElapsed">00:00</span>
             </div>
-        </div>
-
-        <!-- Delete Shot Type Modal -->
-        <div id="deleteShotModal" class="modal">
-            <div class="modal-content">
-                <h3>Delete Shot Type?</h3>
-                <p id="deleteShotName"></p>
-                <div class="modal-buttons">
-                    <button id="cancelDeleteShot" class="modal-btn cancel">Cancel</button>
-                    <button id="confirmDeleteShot" class="modal-btn delete">Delete</button>
-                </div>
-            </div>
+            <button id="stopTimerBtn" class="modal-btn delete">Stop</button>
         </div>
 
         <!-- Direct Input Modal -->
@@ -127,6 +159,88 @@
                 <div class="modal-buttons">
                     <button id="cancelDirectInput" class="modal-btn cancel">Cancel</button>
                     <button id="confirmDirectInput" class="modal-btn confirm">Set</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Categories Modal -->
+        <div id="categoriesModal" class="modal">
+            <div class="modal-content wide">
+                <h3>Manage Categories</h3>
+                <div id="categoriesManageList" class="categories-manage-list"></div>
+                <div class="add-row">
+                    <input type="text" id="newCategoryName" placeholder="New category (e.g. Bunker)">
+                    <button id="addCategoryBtn" class="modal-btn confirm">Add</button>
+                </div>
+                <button id="closeCategoriesModal" class="modal-btn cancel full-width">Done</button>
+            </div>
+        </div>
+
+        <!-- Log Time Modal -->
+        <div id="logTimeModal" class="modal">
+            <div class="modal-content">
+                <h3 id="logTimeTitle">Log Time</h3>
+                <label class="field-label">Sub-category (optional)</label>
+                <select id="logTimeSubcategory"></select>
+                <p id="timerUnavailableNote" class="hint" style="display:none;">Timer only works when logging today. Use "Enter Manually" for other days.</p>
+                <div id="logTimeModeButtons" class="modal-buttons">
+                    <button id="startTimerBtn" class="modal-btn confirm">▶ Start Timer</button>
+                    <button id="enterManuallyBtn" class="modal-btn cancel">Enter Manually</button>
+                </div>
+                <div id="manualTimeFields" class="manual-time-fields" style="display:none;">
+                    <div class="time-input">
+                        <input type="number" id="manualHours" min="0" max="12" placeholder="0"> h
+                        <input type="number" id="manualMinutes" min="0" max="59" placeholder="0"> m
+                    </div>
+                    <div class="modal-buttons">
+                        <button id="cancelManualTime" class="modal-btn cancel">Back</button>
+                        <button id="saveManualTime" class="modal-btn confirm">Save</button>
+                    </div>
+                </div>
+                <button id="cancelLogTime" class="modal-btn cancel full-width" style="margin-top:12px;">Close</button>
+            </div>
+        </div>
+
+        <!-- Edit Practice Entry Modal -->
+        <div id="editEntryModal" class="modal">
+            <div class="modal-content">
+                <h3>Edit Entry</h3>
+                <label class="field-label">Sub-category</label>
+                <select id="editEntrySubcategory"></select>
+                <label class="field-label">Duration</label>
+                <div class="time-input">
+                    <input type="number" id="editEntryHours" min="0" max="12" placeholder="0"> h
+                    <input type="number" id="editEntryMinutes" min="0" max="59" placeholder="0"> m
+                </div>
+                <p class="hint">Forgot to start or stop the timer? Just adjust the duration above.</p>
+                <div class="modal-buttons">
+                    <button id="deleteEntryBtn" class="modal-btn delete">Delete</button>
+                    <button id="cancelEditEntry" class="modal-btn cancel">Cancel</button>
+                    <button id="saveEditEntry" class="modal-btn confirm">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal Modal -->
+        <div id="goalModal" class="modal">
+            <div class="modal-content">
+                <h3 id="goalModalTitle">Add Goal</h3>
+                <label class="field-label">Goal name</label>
+                <input type="text" id="goalName" placeholder="e.g. Holes per week">
+                <label class="field-label">Track</label>
+                <select id="goalMetric"></select>
+                <label class="field-label">Weekly target</label>
+                <div id="goalTargetHoles" class="goal-target-field">
+                    <input type="number" id="goalTargetHolesInput" min="1" placeholder="e.g. 54"> holes / week
+                </div>
+                <div id="goalTargetTime" class="goal-target-field time-input" style="display:none;">
+                    <input type="number" id="goalTargetHours" min="0" placeholder="0"> h
+                    <input type="number" id="goalTargetMinutes" min="0" max="59" placeholder="0"> m / week
+                </div>
+                <div class="modal-buttons">
+                    <button id="deleteGoalBtn" class="modal-btn delete" style="display:none;">Delete</button>
+                    <button id="cancelGoalModal" class="modal-btn cancel">Cancel</button>
+                    <button id="saveGoalBtn" class="modal-btn confirm">Save</button>
                 </div>
             </div>
         </div>
